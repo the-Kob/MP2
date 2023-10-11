@@ -18,6 +18,8 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 import seaborn as sns
 sns.set() # use seaborn plotting style
 
+from sklearn.feature_extraction.text import CountVectorizer
+
 # NEED NLTK (python -m nltk.downloader stopwords && python -m nltk.downloader punkt)!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 # Preprocessing inspired by the example techniques shown in: https://faun.pub/natural-language-processing-nlp-data-preprocessing-techniques-8d6c957e2259
@@ -308,6 +310,8 @@ def main():
     #print(dev_X[0]) # should be 1400 * 0.9 = 1261 (verified)
     #print(dev_Y[0]) # should be DECEPTIVENEGATIVE (verified)
 
+    print(train_X[0])
+
     # =================================================================================
 
     # MODEL SETUPS ====================================================================
@@ -381,3 +385,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
