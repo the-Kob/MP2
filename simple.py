@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, balanced_accuracy_score
+from sklearn.metrics import confusion_matrix, accuracy_score
 
 
 # Preprocessing inspired by the example techniques shown in: https://anderfernandez.com/en/blog/naive-bayes-in-python/
@@ -17,7 +17,7 @@ from sklearn.metrics import confusion_matrix, balanced_accuracy_score
 
 
 def get_scores(y_real, predict):
-    ba_train = balanced_accuracy_score(y_real, predict)
+    ba_train = accuracy_score(y_real, predict)
     cm_train = confusion_matrix(y_real, predict)
 
     return ba_train, cm_train 
