@@ -11,12 +11,15 @@ from nltk.corpus import stopwords
 from sklearn.feature_extraction import text
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC # example from https://www.kaggle.com/code/sainijagjit/text-classification-using-svm
 from sklearn.neighbors import KNeighborsClassifier # example from https://medium.com/@ashins1997/text-classification-456513e18893
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix, accuracy_score
+
+from sklearn.linear_model import SGDClassifier
 
 # Preprocessing inspired by the example techniques shown in: https://anderfernandez.com/en/blog/naive-bayes-in-python/
 # Naive Bayes model implementation inspired by: https://anderfernandez.com/en/blog/naive-bayes-in-python/
@@ -106,9 +109,19 @@ def split_train_dev_sets(data, percentage_dev=0.1):
 
 def create_vectorizer():
 
+    # Use first vectorizer + NB -> 86%
+    # Use second vectorizer + SVM -> 85%
+    # Use second vectorizer + SGDC -> 86%
+
     vectorizer = CountVectorizer(
         strip_accents = 'ascii', 
         lowercase = True # CHANGE THIS PERHAPS?????????????????????????????????????
+    )
+
+    vectorizer = TfidfVectorizer(
+        max_features=7000,
+        strip_accents='ascii',
+        lowercase=True
     )
     
     return vectorizer
@@ -185,6 +198,19 @@ def train_knn(x_train_transformed, y_train, x_test_transformed):
     # Make predictions
     train_predict = knn.predict(x_train_transformed)
     test_predict = knn.predict(x_test_transformed)
+
+    return train_predict, test_predict
+
+def train_sgdc(x_train_transformed, y_train, x_test_transformed):
+    # Define model
+    sgdc = SGDClassifier(loss='hinge', penalty='l2',
+                        alpha=1e-3, random_state=42,
+                        max_iter=5, tol=None)
+    sgdc.fit(x_train_transformed, y_train)
+
+    # Make predictions
+    train_predict = sgdc.predict(x_train_transformed)
+    test_predict = sgdc.predict(x_test_transformed)
 
     return train_predict, test_predict
 
@@ -270,6 +296,23 @@ def train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev
 
     print("\n")
 
+    # Train KNN
+    print_header("Running SGDC...")
+    train_predict, dev_predict = train_sgdc(x_train_transformed, y_train, x_dev_transformed)
+
+    # Get scores (accuracy and confusion matrix)
+    train_scores = get_scores(y_train, train_predict)
+    dev_scores = get_scores(y_dev, dev_predict)
+
+    print("## Train Scores")
+    print(print_scores(train_scores))
+    print("\n\n## Dev Scores")
+    print(print_scores(dev_scores))
+
+    print("\n")
+
+
+
 
 def best_model(x_train, y_train, x_test):
     train_predict, test_predict = train_multinomial_NB(x_train, y_train, x_test)
@@ -326,6 +369,7 @@ def main():
 
     else:
         train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev)
+
 
 
 if __name__ == "__main__":
