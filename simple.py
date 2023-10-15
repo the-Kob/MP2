@@ -33,9 +33,9 @@ def get_scores(y_real, predict):
 
 def print_scores(train_scores, dev_scores):
     print("## Train Scores")
-    print(f"Accuracy: {train_scores[0]}\nConfussion Matrix:\n {train_scores[1]}")
+    print(f"Accuracy: {train_scores[0]}\nConfusion Matrix:\n {train_scores[1]}")
     print("\n\n## Dev Scores")
-    print(f"Accuracy: {dev_scores[0]}\nConfussion Matrix:\n {dev_scores[1]}\n")
+    print(f"Accuracy: {dev_scores[0]}\nConfusion Matrix:\n {dev_scores[1]}\n")
 
 def print_header(text):
     print("\n" + "=" * 80)
@@ -262,7 +262,7 @@ def train_sgdc(x_train_transformed, y_train, x_test_transformed):
     # Define model
     sgdc = SGDClassifier(loss='hinge', penalty='l2',
                         alpha=1e-3, random_state=None,
-                        max_iter=5, tol=None, shuffle=False)
+                        tol=1e-3, shuffle=False)
     sgdc.fit(x_train_transformed, y_train)
 
     # Make predictions
@@ -307,16 +307,16 @@ def train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev
 
     # Train KNN
     print_header("Running KNN...")
-    train_predict, dev_predict = train_knn(x_train_transformed, y_train, x_dev_transformed)
+    #train_predict, dev_predict = train_knn(x_train_transformed, y_train, x_dev_transformed)
 
     # Get scores (accuracy and confusion matrix)
-    train_scores = get_scores(y_train, train_predict)
-    dev_scores = get_scores(y_dev, dev_predict)
+    #train_scores = get_scores(y_train, train_predict)
+    #dev_scores = get_scores(y_dev, dev_predict)
 
-    print_scores(train_scores, dev_scores)
+    #print_scores(train_scores, dev_scores)
 
 
-    # Train KNN
+    # Train SGDC
     print_header("Running SGDC...")
     train_predict, dev_predict = train_sgdc(x_train_transformed, y_train, x_dev_transformed)
 
