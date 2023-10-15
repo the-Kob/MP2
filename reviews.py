@@ -49,7 +49,7 @@ def preprocess_data(file, test_file = False):
         # Tokenize data to promote standardization
         preprocessed_review = word_tokenize(preprocessed_review)
 
-        # Stop word removal and stemming to reduce important words to their root form (promote standardization)
+        # Stop-word removal and stemming to reduce important words to their root form (promote standardization)
         preprocessed_review = [stemmer.stem(word) for word in preprocessed_review if word not in stop_words]
 
         # Add preprocessed data to their respective arrays

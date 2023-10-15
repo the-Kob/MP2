@@ -1,16 +1,20 @@
 import pandas as pd
 
+import numpy as np
+
 import nltk
 from nltk.stem.porter import *
 from nltk.corpus import stopwords
 
 from sklearn.feature_extraction import text
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC # example from https://www.kaggle.com/code/sainijagjit/text-classification-using-svm
+from sklearn.neighbors import KNeighborsClassifier # example from https://medium.com/@ashins1997/text-classification-456513e18893
+from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import confusion_matrix, accuracy_score
-
 
 # Preprocessing inspired by the example techniques shown in: https://anderfernandez.com/en/blog/naive-bayes-in-python/
 # Naive Bayes model implementation inspired by: https://anderfernandez.com/en/blog/naive-bayes-in-python/
@@ -134,27 +138,72 @@ def create_TF_matrix_real_test(data, x_train):
 def train_multinomial_NB(x_train_transformed, y_train, x_test_transformed):
     # Define model
     naive_bayes = MultinomialNB(alpha=3) # by default, smoothing is already 1... (alpha = 3 gets best values)
-    naive_bayes_fit = naive_bayes.fit(x_train_transformed, y_train)
+    naive_bayes.fit(x_train_transformed, y_train)
 
     # Make predictions
-    train_predict = naive_bayes_fit.predict(x_train_transformed)
-    test_predict = naive_bayes_fit.predict(x_test_transformed)
+    train_predict = naive_bayes.predict(x_train_transformed)
+    test_predict = naive_bayes.predict(x_test_transformed)
 
     return train_predict, test_predict
 
 def train_logistic_regression(x_train_transformed, y_train, x_test_transformed):
     # Define model
     logistic_regression = LogisticRegression(max_iter=1400)
-    logistic_regression_fit = logistic_regression.fit(x_train_transformed, y_train)
+    logistic_regression.fit(x_train_transformed, y_train)
 
     # Make predictions
-    train_predict = logistic_regression_fit.predict(x_train_transformed)
-    test_predict = logistic_regression_fit.predict(x_test_transformed)
+    train_predict = logistic_regression.predict(x_train_transformed)
+    test_predict = logistic_regression.predict(x_test_transformed)
 
     return train_predict, test_predict
 
+def train_svm(x_train_transformed, y_train, x_test_transformed):
+    # Define model
+    svm = SVC(C=1.0, kernel='linear', degree=3, gamma='auto')
+    svm.fit(x_train_transformed, y_train)
 
-def train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev):
+    # Make predictions
+    train_predict = svm.predict(x_train_transformed)
+    test_predict = svm.predict(x_test_transformed)
+
+    return train_predict, test_predict
+
+def train_knn(X, y, x_train_transformed, y_train, x_test_transformed):
+    # Normalize data to prevent "data leakage"
+    scaler = StandardScaler(with_mean=False)
+    x_train_transformed = scaler.fit_transform(x_train_transformed)
+    x_test_transformed = scaler.transform(x_test_transformed)
+
+    # Find the best k value with cross validation
+    # k = find_best_k_value(X, y)
+
+    # Define model
+    knn = KNeighborsClassifier(n_neighbors=3) # applying k = 3 by default
+    knn.fit(x_train_transformed, y_train)
+
+    # Make predictions
+    train_predict = knn.predict(x_train_transformed)
+    test_predict = knn.predict(x_test_transformed)
+
+    return train_predict, test_predict
+
+def find_best_k_value(X, y):
+    # https://www.datacamp.com/tutorial/k-nearest-neighbor-classification-scikit-learn
+
+    k_values = [i for i in range (1,31)]
+    scores = []
+
+    for k in k_values:
+        knn = KNeighborsClassifier(n_neighbors=k)
+        score = cross_val_score(knn, X, y, cv=5)
+        scores.append(np.mean(score))
+
+    best_index = np.argmax(scores)
+    best_k_value = k_values[best_index]
+
+    return best_k_value
+
+def train_multiple_models(X, y, x_train_transformed, x_dev_transformed, y_train, y_dev):
 
     print_header("Running Multinomial Naive Bayes...")
     train_predict, dev_predict = train_multinomial_NB(x_train_transformed, y_train, x_dev_transformed)
@@ -179,6 +228,36 @@ def train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev
     # Train Logistic Regression
     print_header("Running Logistic Regression...")
     train_predict, dev_predict = train_logistic_regression(x_train_transformed, y_train, x_dev_transformed)
+
+    # Get scores (accuracy and confusion matrix)
+    train_scores = get_scores(y_train, train_predict)
+    dev_scores = get_scores(y_dev, dev_predict)
+
+    print("## Train Scores")
+    print(print_scores(train_scores))
+    print("\n\n## Dev Scores")
+    print(print_scores(dev_scores))
+
+    print("\n")
+
+    # Train SVM
+    print_header("Running SVM...")
+    train_predict, dev_predict = train_svm(x_train_transformed, y_train, x_dev_transformed)
+
+    # Get scores (accuracy and confusion matrix)
+    train_scores = get_scores(y_train, train_predict)
+    dev_scores = get_scores(y_dev, dev_predict)
+
+    print("## Train Scores")
+    print(print_scores(train_scores))
+    print("\n\n## Dev Scores")
+    print(print_scores(dev_scores))
+
+    print("\n")
+
+    # Train KNN
+    print_header("Running KNN...")
+    train_predict, dev_predict = train_knn(X, y, x_train_transformed, y_train, x_dev_transformed)
 
     # Get scores (accuracy and confusion matrix)
     train_scores = get_scores(y_train, train_predict)
@@ -246,7 +325,7 @@ def main():
         print("Check the results.txt file! \n")
 
     else:
-        train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev)
+        train_multiple_models(train_data['tokens'], train_data['label'], x_train_transformed, x_dev_transformed, y_train, y_dev)
 
 
 if __name__ == "__main__":
