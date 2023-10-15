@@ -31,8 +31,11 @@ def get_scores(y_real, predict):
 
     return ba_train, cm_train 
 
-def print_scores(scores):
-    return f"Balanced Accuracy: {scores[0]}\nConfussion Matrix:\n {scores[1]}"
+def print_scores(train_scores, dev_scores):
+    print("## Train Scores")
+    print(f"Accuracy: {train_scores[0]}\nConfussion Matrix:\n {train_scores[1]}")
+    print("\n\n## Dev Scores")
+    print(f"Accuracy: {dev_scores[0]}\nConfussion Matrix:\n {dev_scores[1]}\n")
 
 def print_header(text):
     print("\n" + "=" * 80)
@@ -45,6 +48,31 @@ def download_packages():
     nltk.download('punkt') # sentence tokenizer
     nltk.download('stopwords') # stopwords
     stopwords.words('english')
+
+def define_stopwords(package=["nltk", "sklearn"], remove_negative_words=False):
+    if package == "nltk":
+        stop_list = stopwords.words('english') # uncomment for nltk stop words
+
+        if(remove_negative_words):
+            words_to_remove = ["but", "no", "nor", "not", "aren't", "couldn't",
+                        "can't", "didn't", "doesn't", "hadn't", "hasn't", "haven't",
+                        "isn't", "shouldn't", "wasn't", "weren't", "wouldn't", "won't"]
+
+            # Remove specified words from the stop_list
+            stop_list = [word for word in stop_list if word not in words_to_remove]
+
+    elif(package == "sklearn"):
+        stop_list = text.ENGLISH_STOP_WORDS # uncomment for sklearn stop words
+
+        if(remove_negative_words):
+            words_to_remove = ["noone", "nothing", "couldnt", "hasnt", "not", "no",
+                               "nobody", "nor", "cant", "never", "however", "but", "cannot"]
+
+            # Remove specified words from the stop_list
+            stop_list = [word for word in stop_list if word not in words_to_remove]
+
+    return stop_list
+
 
 def read_data(file_name, real_test=False):
 
@@ -87,7 +115,7 @@ def data_preprocessing(data, stop_list):
     data['tokens'] = data['tokens'].apply(lambda x: [item for item in x if item not in stop_list])
 
     # Apply Porter stemming
-    stemmer = PorterStemmer() # CAN WE APPLY OTHER STEMMING PERHPS???
+    stemmer = PorterStemmer() # CHANGE: CAN WE APPLY OTHER STEMMING PERHPS???
     data['tokens'] = data['tokens'].apply(lambda x: [stemmer.stem(item) for item in x])
 
     # Unify the strings once again (detokenize)
@@ -109,9 +137,23 @@ def split_train_dev_sets(data, percentage_dev=0.1):
 
 def create_vectorizer():
 
-    # Use first vectorizer + NB -> 86%
+    # With NLTK stopwords
+    # Use first vectorizer + NB -> 86.4%
     # Use second vectorizer + SVM -> 85%
-    # Use second vectorizer + SGDC -> 86%
+    # Use second vectorizer + SGDC -> 85.7%
+
+    # With Sklearn stopwords
+    # Use second vectorizer + SGDC -> 85%
+    # Use second vectorizer + Logistic Regression -> 85.7%
+
+    # With edited NLTK stopwords
+    # Use first vectorizer + NB -> 85.7
+    # Use second vectorizer + SGDC -> 85%
+
+    # With edited Sklearn stopwords
+    # Use first vectorizer + NB -> 85.7%
+    # Use second vectorizer + SVM -> 85.7%
+    # Use second vectorizer + Logistic Regression -> 85%
 
     vectorizer = CountVectorizer(
         strip_accents = 'ascii', 
@@ -173,7 +215,7 @@ def train_logistic_regression(x_train_transformed, y_train, x_test_transformed):
 
 def train_svm(x_train_transformed, y_train, x_test_transformed):
     # Define model
-    svm = SVC(C=1.0, kernel='linear', degree=3, gamma='auto')
+    svm = SVC()
     svm.fit(x_train_transformed, y_train)
 
     # Make predictions
@@ -201,19 +243,6 @@ def train_knn(x_train_transformed, y_train, x_test_transformed):
 
     return train_predict, test_predict
 
-def train_sgdc(x_train_transformed, y_train, x_test_transformed):
-    # Define model
-    sgdc = SGDClassifier(loss='hinge', penalty='l2',
-                        alpha=1e-3, random_state=42,
-                        max_iter=5, tol=None)
-    sgdc.fit(x_train_transformed, y_train)
-
-    # Make predictions
-    train_predict = sgdc.predict(x_train_transformed)
-    test_predict = sgdc.predict(x_test_transformed)
-
-    return train_predict, test_predict
-
 def find_best_k_value(x_train_transformed, y_train, x_test_transformed):
     # Create KNN Classifier
     knn = KNeighborsClassifier() 
@@ -229,6 +258,19 @@ def find_best_k_value(x_train_transformed, y_train, x_test_transformed):
 
     return best_k
 
+def train_sgdc(x_train_transformed, y_train, x_test_transformed):
+    # Define model
+    sgdc = SGDClassifier(loss='hinge', penalty='l2',
+                        alpha=1e-3, random_state=None,
+                        max_iter=5, tol=None, shuffle=False)
+    sgdc.fit(x_train_transformed, y_train)
+
+    # Make predictions
+    train_predict = sgdc.predict(x_train_transformed)
+    test_predict = sgdc.predict(x_test_transformed)
+
+    return train_predict, test_predict
+
 def train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev):
 
     print_header("Running Multinomial Naive Bayes...")
@@ -238,17 +280,7 @@ def train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev
     train_scores = get_scores(y_train, train_predict)
     dev_scores = get_scores(y_dev, dev_predict)
 
-
-    print("## Train Scores")
-    print(print_scores(train_scores))
-    print("\n\n## Dev Scores")
-    print(print_scores(dev_scores))
-
-    # ELIMINATE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    #print(x_train.iat[0])
-    #print(y_train.iat[0])
-    #print("\n")
-    # ELIMINATE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    print_scores(train_scores, dev_scores)
 
 
     # Train Logistic Regression
@@ -259,12 +291,8 @@ def train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev
     train_scores = get_scores(y_train, train_predict)
     dev_scores = get_scores(y_dev, dev_predict)
 
-    print("## Train Scores")
-    print(print_scores(train_scores))
-    print("\n\n## Dev Scores")
-    print(print_scores(dev_scores))
+    print_scores(train_scores, dev_scores)  
 
-    print("\n")
 
     # Train SVM
     print_header("Running SVM...")
@@ -274,12 +302,8 @@ def train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev
     train_scores = get_scores(y_train, train_predict)
     dev_scores = get_scores(y_dev, dev_predict)
 
-    print("## Train Scores")
-    print(print_scores(train_scores))
-    print("\n\n## Dev Scores")
-    print(print_scores(dev_scores))
+    print_scores(train_scores, dev_scores)
 
-    print("\n")
 
     # Train KNN
     print_header("Running KNN...")
@@ -289,12 +313,8 @@ def train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev
     train_scores = get_scores(y_train, train_predict)
     dev_scores = get_scores(y_dev, dev_predict)
 
-    print("## Train Scores")
-    print(print_scores(train_scores))
-    print("\n\n## Dev Scores")
-    print(print_scores(dev_scores))
+    print_scores(train_scores, dev_scores)
 
-    print("\n")
 
     # Train KNN
     print_header("Running SGDC...")
@@ -304,12 +324,8 @@ def train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev
     train_scores = get_scores(y_train, train_predict)
     dev_scores = get_scores(y_dev, dev_predict)
 
-    print("## Train Scores")
-    print(print_scores(train_scores))
-    print("\n\n## Dev Scores")
-    print(print_scores(dev_scores))
+    print_scores(train_scores, dev_scores)
 
-    print("\n")
 
 
 
@@ -330,8 +346,7 @@ def main():
     # write_sklearn_stop_words("sklearn_stop_words.txt")
     # write_nltk_stop_words("nltk_stop_words.txt")
 
-    stop_list = stopwords.words('english') # uncomment for nltk stop words
-    #stop_list = text.ENGLISH_STOP_WORDS # uncomment for sklearn stop words
+    stop_list = define_stopwords("nltk", remove_negative_words=False)
 
     # Train data preprocessing
     train_data = read_data('./train.txt')
@@ -354,7 +369,7 @@ def main():
         x_train, x_dev, y_train, y_dev = split_train_dev_sets(train_data)
         x_train_transformed, x_dev_transformed = create_TF_matrix(x_train, x_dev)
 
-    # TRAIN AND RUN MODELS ===========================================================
+
     if(real_run_condition):
         print_header("Running Best Model > Multinomial MB") # CHANGE THIS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         y_test = best_model(x_train_transformed, y_train, x_test_transformed)
