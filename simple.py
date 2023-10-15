@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 
 import numpy as np
@@ -7,7 +9,7 @@ from nltk.stem.porter import *
 from nltk.corpus import stopwords
 
 from sklearn.feature_extraction import text
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression
@@ -98,7 +100,7 @@ def split_train_dev_sets(data, percentage_dev=0.1):
         test_size= percentage_dev,
         random_state=None, # acts as a seed (shuffle will be the same each run)
         shuffle=False # eliminate this if you want to shuffle
-        )
+    )
     
     return x_train, x_dev, y_train, y_dev
 
@@ -107,10 +109,9 @@ def create_vectorizer():
     vectorizer = CountVectorizer(
         strip_accents = 'ascii', 
         lowercase = True # CHANGE THIS PERHAPS?????????????????????????????????????
-        )
+    )
     
     return vectorizer
-
 
 def create_TF_matrix(x_train, x_dev):
 
@@ -168,17 +169,17 @@ def train_svm(x_train_transformed, y_train, x_test_transformed):
 
     return train_predict, test_predict
 
-def train_knn(X, y, x_train_transformed, y_train, x_test_transformed):
+def train_knn(x_train_transformed, y_train, x_test_transformed):
     # Normalize data to prevent "data leakage"
     scaler = StandardScaler(with_mean=False)
     x_train_transformed = scaler.fit_transform(x_train_transformed)
     x_test_transformed = scaler.transform(x_test_transformed)
 
     # Find the best k value with cross validation
-    # k = find_best_k_value(X, y)
+    k = find_best_k_value(x_train_transformed, y_train, x_test_transformed)
 
     # Define model
-    knn = KNeighborsClassifier(n_neighbors=3) # applying k = 3 by default
+    knn = KNeighborsClassifier(n_neighbors=k)
     knn.fit(x_train_transformed, y_train)
 
     # Make predictions
@@ -187,23 +188,22 @@ def train_knn(X, y, x_train_transformed, y_train, x_test_transformed):
 
     return train_predict, test_predict
 
-def find_best_k_value(X, y):
-    # https://www.datacamp.com/tutorial/k-nearest-neighbor-classification-scikit-learn
+def find_best_k_value(x_train_transformed, y_train, x_test_transformed):
+    # Create KNN Classifier
+    knn = KNeighborsClassifier() 
 
-    k_values = [i for i in range (1,31)]
-    scores = []
+    # Define a grid of k values to search for the best k
+    param_grid = {'n_neighbors': np.arange(1, 31)}
+    
+    # Use GridSearchCV to find the best k using cross-validation
+    grid_search = GridSearchCV(knn, param_grid, cv=5)
+    grid_search.fit(x_train_transformed, y_train)
+    
+    best_k = grid_search.best_params_['n_neighbors']
 
-    for k in k_values:
-        knn = KNeighborsClassifier(n_neighbors=k)
-        score = cross_val_score(knn, X, y, cv=5)
-        scores.append(np.mean(score))
+    return best_k
 
-    best_index = np.argmax(scores)
-    best_k_value = k_values[best_index]
-
-    return best_k_value
-
-def train_multiple_models(X, y, x_train_transformed, x_dev_transformed, y_train, y_dev):
+def train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev):
 
     print_header("Running Multinomial Naive Bayes...")
     train_predict, dev_predict = train_multinomial_NB(x_train_transformed, y_train, x_dev_transformed)
@@ -257,7 +257,7 @@ def train_multiple_models(X, y, x_train_transformed, x_dev_transformed, y_train,
 
     # Train KNN
     print_header("Running KNN...")
-    train_predict, dev_predict = train_knn(X, y, x_train_transformed, y_train, x_dev_transformed)
+    train_predict, dev_predict = train_knn(x_train_transformed, y_train, x_dev_transformed)
 
     # Get scores (accuracy and confusion matrix)
     train_scores = get_scores(y_train, train_predict)
@@ -325,7 +325,7 @@ def main():
         print("Check the results.txt file! \n")
 
     else:
-        train_multiple_models(train_data['tokens'], train_data['label'], x_train_transformed, x_dev_transformed, y_train, y_dev)
+        train_multiple_models(x_train_transformed, x_dev_transformed, y_train, y_dev)
 
 
 if __name__ == "__main__":
