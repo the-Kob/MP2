@@ -25,10 +25,6 @@ from sklearn.model_selection import cross_val_score
 # eliminate very symbol except "!" (and perhaps ?)
 # max_df=0.25, use_dif = 0.25, C = 1
 
-def median_accuracy_scorer(estimator, X, y):
-    scores = cross_val_score(estimator, X, y, cv=5, scoring='accuracy')
-    return np.median(scores)
-
 
 def main():
 
@@ -37,12 +33,12 @@ def main():
                         "can't", "didn't", "doesn't", "hadn't", "hasn't", "haven't",
                         "isn't", "shouldn't", "wasn't", "weren't", "wouldn't", "won't"]
     
-    #stop_list = text.ENGLISH_STOP_WORDS
+    stop_list2 = text.ENGLISH_STOP_WORDS
     #words_to_remove = ["noone", "nothing", "couldnt", "hasnt", "not", "no",
     #                           "nobody", "nor", "cant", "never", "however", "but", "cannot"]
 
     # Remove specified words from the stop_list
-    #stop_list = [word for word in stop_list if word not in words_to_remove]
+    stop_list3 = [word for word in stop_list if word not in words_to_remove]
 
     
 
@@ -63,7 +59,7 @@ def main():
     data['tokens'] = data['tokens'].apply(lambda x: ' '.join(x))
 
     pipeline = Pipeline([
-        ('tfidf', TfidfVectorizer(use_idf=True, ngram_range=(1,2))),
+        ('tfidf', TfidfVectorizer(use_idf=True, ngram_range=(1,2), max_df=0.2, binary=True)),
         ('svm', SVC(kernel='linear'))
     ])
 
@@ -93,8 +89,9 @@ def main():
         #}
 
         param_grid = {
-        'tfidf__min_df': [0.1, 0.25, 0.5, 1]
+        'tfidf__binary': [True, False]
         }
+
 
         # Perform Grid Search with cross-validation
         grid_search = GridSearchCV(pipeline, param_grid, cv=5, scoring="accuracy", verbose=1, n_jobs=-1)
@@ -126,6 +123,7 @@ def main():
 
     #0.82929
     #0.84143
+    #0.85214
 
 if __name__ == "__main__":
     main()
