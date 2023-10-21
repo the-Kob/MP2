@@ -17,7 +17,17 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.metrics import make_scorer
 
 from sklearn.pipeline import Pipeline
+from sklearn.model_selection import cross_val_score
 
+
+
+# Only take out "that", "and", "the"
+# eliminate very symbol except "!" (and perhaps ?)
+# max_df=0.25, use_dif = 0.25, C = 1
+
+def median_accuracy_scorer(estimator, X, y):
+    scores = cross_val_score(estimator, X, y, cv=5, scoring='accuracy')
+    return np.median(scores)
 
 
 def main():
@@ -33,6 +43,8 @@ def main():
 
     # Remove specified words from the stop_list
     #stop_list = [word for word in stop_list if word not in words_to_remove]
+
+    
 
     data = pd.read_table('./train.txt', names = ['label', 'review'])
 
@@ -51,32 +63,42 @@ def main():
     data['tokens'] = data['tokens'].apply(lambda x: ' '.join(x))
 
     pipeline = Pipeline([
-        ('tfidf', TfidfVectorizer(use_idf=True)),
-        ('svm', SVC())
+        ('tfidf', TfidfVectorizer(use_idf=True, ngram_range=(1,2))),
+        ('svm', SVC(kernel='linear'))
     ])
 
-    for i in range(5):
+    import random
+
+    max_accuracy = 0 # 91.4285
+    best_seed = 0 # 217
+
+    for i in range(1):
+
+        lol = random.randint(1, 3)
+        print(lol)
+
         x_train, x_dev, y_train, y_dev = train_test_split(
             data['tokens'], 
             data['label'], 
-            test_size=0.1
+            test_size=0.1,
+            random_state=3
         )
 
 
-        # Define the parameter grid to search -> VERIFY OTHER PARAMETERS
+        #Define the parameter grid to search -> VERIFY OTHER PARAMETERS
+        #param_grid = {
+        #    'tfidf__max_features': [1000, 2000, 5000],  # Example TfidfVectorizer parameter
+        #    'svm__C': [0.1, 1, 10],  # Example SVM parameter
+        #    'svm__kernel': ['linear', 'rbf']
+        #}
+
         param_grid = {
-            'tfidf__max_features': [1000, 2000, 5000],  # Example TfidfVectorizer parameter
-            'svm__C': [0.1, 1, 10],  # Example SVM parameter
-            'svm__kernel': ['linear', 'rbf']
+        'tfidf__min_df': [0.1, 0.25, 0.5, 1]
         }
 
-
-        # Create a custom accuracy scorer for GridSearchCV
-        scorer = make_scorer(accuracy_score)
-
         # Perform Grid Search with cross-validation
-        grid_search = GridSearchCV(pipeline, param_grid, cv=5, scoring=scorer, verbose=1, n_jobs=-1)
-        grid_search.fit(x_train, y_train)
+        grid_search = GridSearchCV(pipeline, param_grid, cv=5, scoring="accuracy", verbose=1, n_jobs=-1)
+        grid_search.fit(data["tokens"], data["label"])
 
         # Get the best model and its parameters
         best_model = grid_search.best_estimator_
@@ -85,22 +107,25 @@ def main():
 
         # Print the best parameters
         print("Best Parameters:", best_params)
-        print("Grid Best Score:", grid_search.best_score_)
+        print("Grid Best Score: %0.5f" % grid_search.best_score_)
+
+
+        #pipeline.fit(x_train, y_train)
 
         # Make predictions on the validation set
-        dev_predict = best_model.predict(x_dev)
+        #dev_predict = pipeline.predict(x_dev)
 
         # Calculate accuracy and confusion matrix
-        ba_train = accuracy_score(y_dev, dev_predict)
-        cm_train = confusion_matrix(y_dev, dev_predict)
+        #ba_train = accuracy_score(y_dev, dev_predict)
+        #cm_train = confusion_matrix(y_dev, dev_predict)
         
-        print(f"Accuracy: {ba_train}\nConfusion Matrix:\n {cm_train}\n")
+        #print(f"Accuracy: {ba_train}\nConfusion Matrix:\n {cm_train}\n")
 
-    from sklearn.model_selection import cross_val_score
     scores = cross_val_score(pipeline, data["tokens"], data["label"], cv=5, scoring='accuracy')
-    print("%0.2f accuracy with a standard deviation of %0.2f" % (scores.mean(), scores.std()))
+    print("%0.5f accuracy with a standard deviation of %0.5f" % (scores.mean(), scores.std()))
 
-# 87.8
+    #0.82929
+    #0.84143
 
 if __name__ == "__main__":
     main()
