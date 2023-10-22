@@ -46,6 +46,29 @@ def improved_preprocess_data(data):
 
     return data
 
+def eval_run_best_pipeline(pipeline, x_train, x_dev, y_train, y_dev):
+
+    # Make predictions
+    train_predict = pipeline.predict(x_train)
+    dev_predict = pipeline.predict(x_dev)
+
+    train_scores = auxiliary.get_scores(y_train, train_predict)
+    dev_scores = auxiliary.get_scores(y_dev, dev_predict)
+
+    auxiliary.print_scores(train_scores, dev_scores)
+
+    return dev_predict
+
+def get_incorrect_evaluations(y_dev, dev_predict, x_dev, data):
+    
+    print("\n## Incorrect Predictions")
+    print("Instances where predictions were incorrect in the development set:")
+    for i, (true_label, predicted_label) in enumerate(zip(y_dev, dev_predict)):
+        
+        if true_label != predicted_label:
+            review_number = (data[data['tokens'] == x_dev.iloc[i]].index).values[0] + 1
+            print(f"\nReview Number {review_number}: True Label: {true_label}, Predicted Label: {predicted_label}, \nText: {data['review'].iloc[review_number - 1]}")
+
 def main():
 
     auxiliary.download_packages()
@@ -76,11 +99,14 @@ def main():
     best_pipeline.fit(x_train, y_train)
 
     # Evaluate model on dev set
-    auxiliary.eval_run_pipeline(best_pipeline, x_train, x_dev, y_train, y_dev)
+    dev_predictions = eval_run_best_pipeline(best_pipeline, x_train, x_dev, y_train, y_dev)
 
     # Evalute model with average accuracy score (cross validation)
+    print("\n## Average Accuracy")
     scores = cross_val_score(best_pipeline, processed_train_data["tokens"], processed_train_data["label"], cv=5, scoring='accuracy')
-    print("Fine-tuned Support Vector Machine achieves an average accuracy of %0.5f with a standard deviation of %0.5f." % (scores.mean(), scores.std()))
+    print("Average accuracy of %0.5f with a standard deviation of %0.5f." % (scores.mean(), scores.std()))
+
+    get_incorrect_evaluations(y_dev, dev_predictions, x_dev, train_data)
 
     # Run model for test_just_reviews.txt
     test_predict = best_pipeline.predict(processed_test_data[['tokens']].squeeze('columns')) # get only the tokens, not the reviews) # WILL NOT WORK
