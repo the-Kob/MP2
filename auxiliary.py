@@ -81,3 +81,14 @@ def write_nltk_stop_words(filename):
     for item in stopwords.words('english'):
         nltk_stop_words.write(item + "\n")
     nltk_stop_words.close()
+
+def eval_run_pipeline(pipeline, x_train, x_dev, y_train, y_dev):
+
+    # Make predictions
+    train_predict = pipeline.predict(x_train)
+    dev_predict = pipeline.predict(x_dev)
+
+    train_scores = get_scores(y_train, train_predict)
+    dev_scores = get_scores(y_dev, dev_predict)
+
+    print_scores(train_scores, dev_scores)

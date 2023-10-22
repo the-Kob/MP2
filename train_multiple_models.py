@@ -38,16 +38,6 @@ def data_preprocessing(data, stop_list):
     print("...")
 
     return data
-
-def split_train_dev_sets(data, percentage_dev=0.1):
-    
-    x_train, x_dev, y_train, y_dev = train_test_split(
-        data['tokens'], 
-        data['label'], 
-        test_size= percentage_dev
-    )
-    
-    return x_train, x_dev, y_train, y_dev
     
 def train_model(x_train, y_train, model=[MultinomialNB(), LogisticRegression(), SVC(), SGDClassifier()], vectorizer=[CountVectorizer(), TfidfVectorizer()]):
 
@@ -61,16 +51,6 @@ def train_model(x_train, y_train, model=[MultinomialNB(), LogisticRegression(), 
 
     return pipeline
 
-def eval_run_pipeline(pipeline, x_train, x_dev, y_train, y_dev):
-
-    # Make predictions
-    train_predict = pipeline.predict(x_train)
-    dev_predict = pipeline.predict(x_dev)
-
-    train_scores = auxiliary.get_scores(y_train, train_predict)
-    dev_scores = auxiliary.get_scores(y_dev, dev_predict)
-
-    auxiliary.print_scores(train_scores, dev_scores)
 
 def train_multiple_models(x_train, x_dev, y_train, y_dev, data):
 
@@ -79,9 +59,9 @@ def train_multiple_models(x_train, x_dev, y_train, y_dev, data):
     current_pipeline = train_model(x_train, y_train, model=MultinomialNB(), vectorizer=TfidfVectorizer())
 
     # Get scores (accuracy and confusion matrix)
-    eval_run_pipeline(current_pipeline, x_train, x_dev, y_train, y_dev)
+    auxiliary.eval_run_pipeline(current_pipeline, x_train, x_dev, y_train, y_dev)
 
-    # Calculate cross validation (median) accuracy score 
+    # Calculate cross validation's average accuracy score 
     scores = cross_val_score(current_pipeline, data["tokens"], data["label"], cv=5, scoring='accuracy')
     print("Multinomial Naive Bayes achieves an average accuracy of %0.5f accuracy with a standard deviation of %0.5f" % (scores.mean(), scores.std()))
     # ==================================================================================================================================================
@@ -92,9 +72,9 @@ def train_multiple_models(x_train, x_dev, y_train, y_dev, data):
     current_pipeline = train_model(x_train, y_train, model=LogisticRegression(), vectorizer=TfidfVectorizer())
 
     # Get scores (accuracy and confusion matrix)
-    eval_run_pipeline(current_pipeline, x_train, x_dev, y_train, y_dev)
+    auxiliary.eval_run_pipeline(current_pipeline, x_train, x_dev, y_train, y_dev)
 
-    # Calculate cross validation (median) accuracy score 
+    # Calculate cross validation's average accuracy score 
     scores = cross_val_score(current_pipeline, data["tokens"], data["label"], cv=5, scoring='accuracy')
     print("Logistic Regression achieves an average accuracy of %0.5f accuracy with a standard deviation of %0.5f." % (scores.mean(), scores.std()))
     # ==================================================================================================================================================
@@ -105,9 +85,9 @@ def train_multiple_models(x_train, x_dev, y_train, y_dev, data):
     current_pipeline = train_model(x_train, y_train, model=SVC(), vectorizer=TfidfVectorizer())
 
     # Get scores (accuracy and confusion matrix)
-    eval_run_pipeline(current_pipeline, x_train, x_dev, y_train, y_dev)
+    auxiliary.eval_run_pipeline(current_pipeline, x_train, x_dev, y_train, y_dev)
 
-    # Calculate cross validation (median) accuracy score 
+    # Calculate cross validation's average accuracy score
     scores = cross_val_score(current_pipeline, data["tokens"], data["label"], cv=5, scoring='accuracy')
     print("Support Vector Machine achieves an average accuracy of %0.5f accuracy with a standard deviation of %0.5f." % (scores.mean(), scores.std()))
     # ==================================================================================================================================================
@@ -118,14 +98,12 @@ def train_multiple_models(x_train, x_dev, y_train, y_dev, data):
     current_pipeline = train_model(x_train, y_train, model=SGDClassifier(), vectorizer=TfidfVectorizer())
 
     # Get scores (accuracy and confusion matrix)
-    eval_run_pipeline(current_pipeline, x_train, x_dev, y_train, y_dev)
+    auxiliary.eval_run_pipeline(current_pipeline, x_train, x_dev, y_train, y_dev)
 
-    # Calculate cross validation (median) accuracy score 
+    # Calculate cross validation's average accuracy score
     scores = cross_val_score(current_pipeline, data["tokens"], data["label"], cv=5, scoring='accuracy')
     print("Stochastic Gradient Descent achieves an average accuracy of %0.5f accuracy with a standard deviation of %0.5f." % (scores.mean(), scores.std()))
     # ==================================================================================================================================================
-
-    print("\n=> The best model appears to be the Support Vector Machine...\n")
 
 def main():
 
@@ -141,10 +119,15 @@ def main():
     train_data = auxiliary.read_train_data('./train.txt')
     train_data = data_preprocessing(train_data, stop_list)
 
-    x_train, x_dev, y_train, y_dev = split_train_dev_sets(train_data)
+    x_train, x_dev, y_train, y_dev = train_test_split(
+        train_data['tokens'], 
+        train_data['label'], 
+        test_size=0.1
+    )
 
     train_multiple_models(x_train, x_dev, y_train, y_dev, train_data)
 
+    print("\n=> The best model appears to be the Support Vector Machine...\n")
 
 
 if __name__ == "__main__":
