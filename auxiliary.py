@@ -92,3 +92,28 @@ def eval_run_pipeline(pipeline, x_train, x_dev, y_train, y_dev):
     dev_scores = get_scores(y_dev, dev_predict)
 
     print_scores(train_scores, dev_scores)
+
+    
+def eval_return_pipeline(pipeline, x_train, x_dev, y_train, y_dev):
+
+    # Make predictions
+    train_predict = pipeline.predict(x_train)
+    dev_predict = pipeline.predict(x_dev)
+
+    train_scores = get_scores(y_train, train_predict)
+    dev_scores = get_scores(y_dev, dev_predict)
+
+    print_scores(train_scores, dev_scores)
+
+    return dev_predict
+
+
+def get_incorrect_evaluations(y_dev, dev_predict, x_dev, data):
+    
+    print("\n## Incorrect Predictions")
+    print("Instances where predictions were incorrect:")
+    for i, (true_label, predicted_label) in enumerate(zip(y_dev, dev_predict)):
+        
+        if true_label != predicted_label:
+            review_number = (data[data['tokens'] == x_dev.iloc[i]].index).values[0] + 1
+            print(f"\nReview Number {review_number}: True Label: {true_label}, Predicted Label: {predicted_label}, \nText: {data['review'].iloc[review_number - 1]}")
