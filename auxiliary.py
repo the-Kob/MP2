@@ -5,7 +5,10 @@ from nltk.stem.porter import *
 from nltk.corpus import stopwords
 
 from sklearn.feature_extraction import text
-from sklearn.metrics import confusion_matrix, accuracy_score
+from sklearn.metrics import confusion_matrix, accuracy_score, classification_report
+
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def get_scores(y_real, predict):
@@ -93,6 +96,28 @@ def eval_run_pipeline(pipeline, x_train, x_dev, y_train, y_dev):
 
     print_scores(train_scores, dev_scores)
 
+    cr = classification_report(y_dev, dev_predict)
+
+    print(cr)
+
+    #plot_classification_report(cr)
+
+def plot_classification_report(report):
+    lines = report.split('\n')
+    classes = []
+    plotMat = []
+    for line in lines[2:(len(lines) - 5)]:
+        t = line.split()
+        if len(t) > 0:
+            classes.append(t[0])
+            v = [float(x) for x in t[1: len(t) - 1]]
+            plotMat.append(v)
+
+    fig, ax = plt.subplots()
+    sns.heatmap(plotMat, annot=True, fmt='g', cmap='Blues', xticklabels=['Precision', 'Recall', 'F1-Score'])
+    ax.set_yticklabels(classes, rotation=0)
+    plt.show()
+
     
 def eval_return_pipeline(pipeline, x_train, x_dev, y_train, y_dev):
 
@@ -104,6 +129,10 @@ def eval_return_pipeline(pipeline, x_train, x_dev, y_train, y_dev):
     dev_scores = get_scores(y_dev, dev_predict)
 
     print_scores(train_scores, dev_scores)
+
+    cr = classification_report(y_dev, dev_predict)
+
+    print(cr)
 
     return dev_predict
 
@@ -117,3 +146,21 @@ def get_incorrect_evaluations(y_dev, dev_predict, x_dev, data):
         if true_label != predicted_label:
             review_number = (data[data['tokens'] == x_dev.iloc[i]].index).values[0] + 1
             print(f"\nReview Number {review_number}: True Label: {true_label}, Predicted Label: {predicted_label}, \nText: {data['review'].iloc[review_number - 1]}")
+
+def output_dev_gold_and_predicted(y_dev, dev_prediction, x_dev, data):
+
+    dev_reviews = open("dev_reviews.txt", "w")
+    for i, (true_label, predicted_label) in enumerate(zip(y_dev, dev_prediction)):
+        review_number = (data[data['tokens'] == x_dev.iloc[i]].index).values[0] + 1
+        dev_reviews.write(data['review'].iloc[review_number - 1] + "\n")
+    dev_reviews.close()
+
+    gold_labels = open("dev_gold_labels.txt", "w")
+    for item in y_dev:
+        gold_labels.write(item + "\n")
+    gold_labels.close()
+
+    dev_labels = open("dev_predicted_labels.txt", "w")
+    for item in dev_prediction:
+        dev_labels.write(item + "\n")
+    dev_labels.close()

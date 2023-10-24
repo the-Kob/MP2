@@ -8,7 +8,6 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.svm import SVC
-from sklearn.metrics import confusion_matrix, accuracy_score
 from sklearn.model_selection import cross_val_score, train_test_split
 
 import auxiliary
@@ -122,7 +121,8 @@ def main():
     x_train, x_dev, y_train, y_dev = train_test_split(
         train_data['tokens'], 
         train_data['label'], 
-        test_size=0.1
+        test_size=0.1,
+        random_state=1
     )
 
     train_multiple_models(x_train, x_dev, y_train, y_dev, train_data)

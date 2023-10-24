@@ -27,8 +27,8 @@ def main():
     data['tokens'] = data.apply(lambda x: tokenizer.tokenize(x['review']), axis = 1)
 
     # Remove stop words
-    # stop_list = auxiliary.define_stopwords("nltk", remove_negative_words=False)
-    # data['tokens'] = data['tokens'].apply(lambda x: [item for item in x if item not in stop_list])
+    #stop_list = auxiliary.define_stopwords("nltk", remove_negative_words=False)
+    #data['tokens'] = data['tokens'].apply(lambda x: [item for item in x if item not in stop_list])
 
     # Apply Porter stemming
     stemmer = PorterStemmer()
@@ -63,10 +63,6 @@ def main():
 
     auxiliary.print_header("Running fine-tuned model...")
 
-    print("\n## Average Accuracy")
-    scores = cross_val_score(pipeline, data["tokens"], data["label"], cv=5, scoring='accuracy')
-    print("Fine tuned Support Vector Machine achieves an average accuracy of %0.5f with a standard deviation of %0.5f." % (scores.mean(), scores.std()))
-
     x_train, x_dev, y_train, y_dev = train_test_split(
         data['tokens'], 
         data['label'], 
@@ -76,8 +72,15 @@ def main():
     pipeline.fit(x_train, y_train)
     dev_predictions = auxiliary.eval_return_pipeline(pipeline, x_train, x_dev, y_train, y_dev)
 
+    print("\n## Average Accuracy")
+    scores = cross_val_score(pipeline, data["tokens"], data["label"], cv=5, scoring='accuracy')
+    print("Fine tuned Support Vector Machine achieves an average accuracy of %0.5f with a standard deviation of %0.5f." % (scores.mean(), scores.std()))
+
     auxiliary.get_incorrect_evaluations(y_dev, dev_predictions, x_dev, data)
     print("\n")
+
+    #For external analysis (like NLP-Telescope)
+    #auxiliary.output_dev_gold_and_predicted(y_dev, dev_predictions, x_dev, data)
 
 if __name__ == "__main__":
     main()
